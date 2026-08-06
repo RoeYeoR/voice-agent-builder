@@ -1,0 +1,83 @@
+// Prisma schema for the AI Voice Agent Builder
+// Docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// A voice assistant the user has designed via the builder chat.
+// Mirrors an "assistant" object on Vapi's side (vapiAssistantId links the two).
+model Agent {
+  id                    String   @id @default(cuid())
+  name                  String   @default("Untitled Agent")
+  firstMessage          String   @default("")
+  systemPrompt          String   @default("")
+  voiceId               String   @default("21m00Tcm4TlvDq8ikWAM")
+  qualificationCriteria Json     @default("[]")
+  vapiAssistantId       String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  messages BuilderMessage[]
+  calls    Call[]
+}
+
+// One turn of the builder chat (the conversation the user has with Claude
+// while designing/editing an Agent).
+model BuilderMessage {
+  id        String   @id @default(cuid())
+  agentId   String
+  agent     Agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  role      String // "user" | "assistant"
+  content   String
+  createdAt DateTime @default(now())
+}
+
+// A lead the agent can call.
+model Lead {
+  id        String   @id @default(cuid())
+  name      String
+  phone     String
+  email     String?
+  notes     String?
+  status    String   @default("new") // new | called | qualified | not_qualified
+  createdAt DateTime @default(now())
+
+  calls    Call[]
+  meetings Meeting[]
+}
+
+// One phone (or web) call placed by an Agent to a Lead.
+model Call {
+  id                 String   @id @default(cuid())
+  agentId            String
+  agent              Agent    @relation(fields: [agentId], references: [id])
+  leadId             String?
+  lead                Lead?    @relation(fields: [leadId], references: [id])
+  vapiCallId         String?
+  status             String   @default("queued") // queued | in_progress | ended | failed
+  transcript         String?
+  qualificationResult Json?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  meetings Meeting[]
+}
+
+// A meeting booked (via Cal.com) as the outcome of a call.
+model Meeting {
+  id             String   @id @default(cuid())
+  callId         String
+  call           Call     @relation(fields: [callId], references: [id])
+  leadId         String
+  lead           Lead     @relation(fields: [leadId], references: [id])
+  calcomBookingId String?
+  scheduledAt    DateTime?
+  status         String   @default("booked") // booked | cancelled
+  createdAt      DateTime @default(now())
+}
