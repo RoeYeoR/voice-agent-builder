@@ -11,6 +11,16 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  try {
+    return await handlePlaceCall(req);
+  } catch (err) {
+    console.error("POST /api/calls failed:", err);
+    const message = err instanceof Error ? err.message : "Unexpected server error";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
+async function handlePlaceCall(req: NextRequest) {
   const body = await req.json();
   const { agentId, leadId } = body as { agentId?: string; leadId?: string };
 

@@ -11,6 +11,19 @@ type AgentConfigPatch = {
 };
 
 export async function POST(req: NextRequest) {
+  try {
+    return await handleBuilderMessage(req);
+  } catch (err) {
+    // Without this, an unhandled error (bad DB connection, missing/invalid
+    // ANTHROPIC_API_KEY, etc.) crashes the function with an empty response body,
+    // which shows up client-side as a confusing "Unexpected end of JSON input".
+    console.error("POST /api/builder failed:", err);
+    const message = err instanceof Error ? err.message : "Unexpected server error";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
+async function handleBuilderMessage(req: NextRequest) {
   const body = await req.json();
   const { agentId, message } = body as { agentId?: string; message: string };
 
