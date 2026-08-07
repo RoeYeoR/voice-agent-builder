@@ -1,9 +1,12 @@
-# AI Voice Agent Builder — Real Estate Lead Qualifier
+# AI Voice Agent Builder
 
 A platform where you chat with an AI "builder" that designs a voice AI assistant in
-plain language. The generated assistant then calls real-estate leads, qualifies them
-(budget, timeline, neighborhood), offers real open slots from a calendar, and books a
-real meeting once the lead picks one.
+plain language — for any outbound-calling use case, not just one industry. The
+generated assistant then calls contacts, qualifies them against whatever criteria fit
+that use case, offers real open slots from a calendar, and books a real meeting once
+the contact picks one. The example used throughout this README is a real estate lead
+qualifier, but the builder chat works the same way for a SaaS demo booker, a
+recruiting screener, or anything else you describe to it.
 
 This README is both the setup guide and a description of how the pieces fit together —
 written for someone who has never built anything like this before.
@@ -82,6 +85,27 @@ speech-to-text through its own credits by default.
 The browser "Call in browser" button works with zero phone setup. If you also want to
 call a real phone number from `/leads`, go to Vapi's dashboard → Phone Numbers →
 provision a free trial number, then copy its ID into `VAPI_PHONE_NUMBER_ID` in `.env`.
+
+### Custom voices (ElevenLabs)
+
+Every generated assistant already speaks through ElevenLabs — Vapi calls it under the
+hood (`voice: { provider: "11labs", voiceId }` in `src/lib/vapi.ts`) using Vapi's own
+shared account, billed through your Vapi credits. No separate ElevenLabs account
+needed for the default voice.
+
+Two ways to use a different voice:
+
+- **Pick another public ElevenLabs voice** — copy any voice ID from
+  [ElevenLabs' voice library](https://elevenlabs.io/voice-library) (or from Vapi's own
+  assistant editor, which has a voice picker) and just tell the builder chat
+  *"use voice ID `<id>`"*. The `update_agent_config` tool (see `src/lib/claude.ts`)
+  accepts an explicit `voiceId` — Claude is instructed to only set it when given a
+  concrete ID, never to guess one from a vague description like "a friendly voice."
+- **Use your own ElevenLabs account** (e.g. a cloned/custom voice) — sign up at
+  [elevenlabs.io](https://elevenlabs.io), grab an API key, then in Vapi's dashboard go
+  to **Org Settings → Provider Keys** and add it there. Once validated, any voice ID
+  from your own ElevenLabs account (including cloned voices) can be used the same way
+  — no code change needed, since our app never talks to ElevenLabs directly; Vapi does.
 
 ## Environment variables
 

@@ -20,27 +20,37 @@ export const UPDATE_AGENT_CONFIG_TOOL: Anthropic.Tool = {
     properties: {
       name: {
         type: "string",
-        description: "Short human-readable name for the assistant, e.g. 'Sunset Realty Lead Qualifier'.",
+        description: "Short human-readable name for the assistant, e.g. 'Enterprise Demo Booker'.",
       },
       firstMessage: {
         type: "string",
-        description: "The exact greeting the assistant says first when a lead picks up. Natural spoken language.",
+        description: "The exact greeting the assistant says first when a contact picks up. Natural spoken language.",
       },
       systemPrompt: {
         type: "string",
         description:
           "Full instructions for the voice assistant, written as direct second-person instructions to it: " +
-          "its persona and tone, the qualification questions it must ask (in order) to learn the lead's budget, " +
-          "timeline, and location/property preferences, how to handle objections or hesitation, and the booking " +
-          "flow: once the lead seems interested in meeting, call check_availability, read 2-3 of the returned " +
-          "options out loud, and once the lead picks one, call book_meeting with that exact slot's ISO timestamp.",
+          "its persona and tone, the specific questions it must ask (in order) to qualify the contact for " +
+          "whatever this agent's purpose is, how to handle objections or hesitation, and the booking flow: " +
+          "once the contact seems interested in meeting, call check_availability, read 2-3 of the returned " +
+          "options out loud, and once they pick one, call book_meeting with that exact slot's ISO timestamp.",
       },
       qualificationCriteria: {
         type: "array",
         items: { type: "string" },
         description:
-          "Short bullet list of the specific facts the assistant must learn about each lead, e.g. " +
-          "['budget range', 'move-in timeline', 'preferred neighborhood', 'buying or selling'].",
+          "Short bullet list of the specific facts the assistant must learn about each contact, tailored to " +
+          "whatever this agent is for — e.g. ['budget range', 'move-in timeline'] for a real estate agent, " +
+          "['team size', 'current tool'] for a SaaS demo booker, ['years of experience', 'notice period'] for " +
+          "a recruiting screener.",
+      },
+      voiceId: {
+        type: "string",
+        description:
+          "An ElevenLabs voice ID to use for this assistant. Only set this if the user gives you an exact " +
+          "voice ID (their own or a custom/cloned one) or explicitly asks to change the voice and you already " +
+          "know a valid ID for what they want — never invent or guess a voice ID from a vague description like " +
+          "'a friendly voice'. Leave unset to keep whatever voice is already configured.",
       },
     },
     required: ["name", "firstMessage", "systemPrompt", "qualificationCriteria"],
@@ -52,20 +62,26 @@ export function builderSystemPrompt(currentConfig: {
   firstMessage: string;
   systemPrompt: string;
   qualificationCriteria: unknown;
+  voiceId: string;
 }) {
-  return `You are the "builder agent" inside a platform that lets a real-estate professional design a voice AI \
-assistant just by chatting with you in plain language. That voice assistant (built by Vapi) will actually call \
-leads, qualify them against criteria, and book meetings — your job is only to design/edit its configuration by \
-calling the update_agent_config tool, and to reply conversationally about what you set up.
+  return `You are the "builder agent" inside a platform that lets someone design a voice AI assistant for any \
+outbound-calling use case — sales, real estate, recruiting, customer renewals, appointment reminders, event \
+follow-ups, anything — just by chatting with you in plain language. That voice assistant (built by Vapi) will \
+actually call contacts, qualify them against whatever criteria fit this specific use case, and book meetings — \
+your job is only to design/edit its configuration by calling the update_agent_config tool, and to reply \
+conversationally about what you set up.
 
 Ground rules:
 - On every user message that implies any change (new agent, tweak the script, change the voice/persona, add a \
 question, change tone, etc.), call update_agent_config with the complete, updated configuration.
 - If this is the very first message and the config is still empty, invent sensible defaults from what the user \
-described rather than asking a lot of clarifying questions first — get something working, then refine.
+described rather than asking a lot of clarifying questions first — get something working, then refine. Infer the \
+domain and vocabulary entirely from what the user says; don't assume any particular industry.
 - Keep firstMessage short, warm, and natural to say out loud.
 - Keep systemPrompt as clear operating instructions for the *voice* assistant itself (it will literally be given \
 this text as its own system prompt), not a description aimed at the user.
+- Only touch voiceId when the user gives you a concrete voice ID or clearly asks for a voice change you can \
+resolve to one — see the tool's voiceId description for why guessing is off-limits.
 - After calling the tool, also reply with a short, friendly chat message (1-3 sentences) summarizing what you \
 changed, as if talking to the person building the agent.
 - If the user asks something unrelated to configuring the assistant, just answer normally without calling the tool.
@@ -77,13 +93,13 @@ ${JSON.stringify(currentConfig, null, 2)}`;
 export type QualificationResult = {
   qualified: boolean;
   summary: string;
-  budget: string;
-  timeline: string;
-  locationPreference: string;
+  keyDetails: string[];
 };
 
 // Runs once per finished call (from the end-of-call-report webhook) to turn the
-// raw transcript into the structured summary shown on the calls dashboard.
+// raw transcript into the structured summary shown on the calls dashboard. Kept
+// domain-agnostic (unlike the fixed real-estate fields an earlier version used)
+// since agents built on this platform can be for any use case.
 export async function extractQualification(transcript: string): Promise<QualificationResult> {
   const response = await anthropic.messages.create({
     model: BUILDER_MODEL,
@@ -91,7 +107,8 @@ export async function extractQualification(transcript: string): Promise<Qualific
     messages: [
       {
         role: "user",
-        content: `Read this real-estate lead-qualification call transcript and extract the outcome.\n\nTranscript:\n${transcript}`,
+        content: `Read this call transcript and extract the outcome. The assistant's exact purpose and \
+qualification criteria are whatever the transcript itself implies — infer them from context.\n\nTranscript:\n${transcript}`,
       },
     ],
     output_config: {
@@ -102,14 +119,18 @@ export async function extractQualification(transcript: string): Promise<Qualific
           properties: {
             qualified: {
               type: "boolean",
-              description: "Whether this lead is a genuine, qualified buyer/seller worth following up with.",
+              description: "Whether this contact is a genuine, qualified prospect worth following up with.",
             },
             summary: { type: "string", description: "One or two sentence summary of how the call went." },
-            budget: { type: "string", description: "The lead's stated budget, or 'unknown' if never discussed." },
-            timeline: { type: "string", description: "The lead's stated timeline, or 'unknown'." },
-            locationPreference: { type: "string", description: "Preferred neighborhood/area, or 'unknown'." },
+            keyDetails: {
+              type: "array",
+              items: { type: "string" },
+              description:
+                "The key facts learned about the contact, each as a short 'label: value' string, e.g. " +
+                "'budget: $500k-$700k' or 'team size: 40 engineers'. Empty array if nothing concrete came up.",
+            },
           },
-          required: ["qualified", "summary", "budget", "timeline", "locationPreference"],
+          required: ["qualified", "summary", "keyDetails"],
           additionalProperties: false,
         },
       },

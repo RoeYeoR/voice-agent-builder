@@ -8,6 +8,7 @@ type AgentConfigPatch = {
   firstMessage?: string;
   systemPrompt?: string;
   qualificationCriteria?: string[];
+  voiceId?: string;
 };
 
 export async function POST(req: NextRequest) {
@@ -51,6 +52,7 @@ async function handleBuilderMessage(req: NextRequest) {
     firstMessage: agent.firstMessage,
     systemPrompt: agent.systemPrompt,
     qualificationCriteria: agent.qualificationCriteria,
+    voiceId: agent.voiceId,
   };
 
   const response = await anthropic.messages.create({
@@ -83,6 +85,7 @@ async function handleBuilderMessage(req: NextRequest) {
         firstMessage: configPatch.firstMessage ?? agent.firstMessage,
         systemPrompt: configPatch.systemPrompt ?? agent.systemPrompt,
         qualificationCriteria: configPatch.qualificationCriteria ?? (agent.qualificationCriteria as string[]),
+        voiceId: configPatch.voiceId ?? agent.voiceId,
       },
       include: { messages: true },
     });

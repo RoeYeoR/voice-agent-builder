@@ -104,9 +104,11 @@ export default function BuilderPage() {
             <div className="flex flex-col gap-3">
               {messages.length === 0 && (
                 <p className="text-sm text-muted-foreground">
-                  Describe the voice agent you want, e.g. &quot;Build me an assistant that calls real
-                  estate leads, asks about their budget, timeline, and preferred neighborhood, and
-                  books a viewing once they agree on a time.&quot;
+                  Describe any voice agent you want — it&apos;s not limited to one industry. For example:
+                  &quot;Build me an assistant that calls real estate leads, asks about their budget, timeline,
+                  and preferred neighborhood, and books a viewing once they agree on a time,&quot; or
+                  &quot;Build me a SaaS demo booker that asks about team size and current tooling, then books
+                  a 30-minute demo.&quot;
                 </p>
               )}
               {messages.map((m, i) => (
@@ -177,6 +179,14 @@ export default function BuilderPage() {
                   )}
                 </div>
               </div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-muted-foreground">Voice ID</span>
+                <code className="text-xs">{agent.voiceId}</code>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Change it by telling the chat an exact ElevenLabs voice ID to use — e.g. &quot;use voice ID
+                pNInz6obpgDQGcFmaJgB&quot;.
+              </p>
               <Separator />
               <details>
                 <summary className="cursor-pointer text-xs font-medium text-muted-foreground">

@@ -14,13 +14,15 @@ export type AgentConfig = {
 // Two tools every generated assistant gets, both handled by our webhook
 // (src/app/api/webhooks/vapi/route.ts): the assistant first checks what's
 // really open on the calendar, offers a couple of options out loud, then
-// books whichever one the lead picks.
+// books whichever one the contact picks. Deliberately domain-agnostic — the
+// same two tools serve a real estate viewing, a sales demo, a recruiting
+// screen call, or anything else the builder chat generates.
 const CHECK_AVAILABILITY_TOOL = {
   type: "function",
   function: {
     name: "check_availability",
     description:
-      "Look up real open slots on the calendar so you can offer the lead 2-3 concrete options to choose from. Call this before offering any specific time.",
+      "Look up real open slots on the calendar so you can offer the contact 2-3 concrete options to choose from. Call this before offering any specific time.",
     parameters: { type: "object", properties: {} },
   },
 } as const;
@@ -30,18 +32,18 @@ const BOOK_MEETING_TOOL = {
   function: {
     name: "book_meeting",
     description:
-      "Reserve a meeting (property viewing or consultation call). Only call this after the lead has explicitly picked one of the exact slot times returned by check_availability — reuse that ISO timestamp exactly.",
+      "Reserve a meeting. Only call this after the contact has explicitly picked one of the exact slot times returned by check_availability — reuse that ISO timestamp exactly.",
     parameters: {
       type: "object",
       properties: {
-        leadName: { type: "string", description: "The lead's full name." },
+        leadName: { type: "string", description: "The contact's full name." },
         startTime: {
           type: "string",
           description: "The exact ISO 8601 timestamp of the chosen slot, copied from check_availability's output.",
         },
         notes: {
           type: "string",
-          description: "Anything useful to bring into the meeting: property interest, budget, etc.",
+          description: "Anything useful to bring into the meeting: what they're interested in, key qualifying facts, etc.",
         },
       },
       required: ["leadName", "startTime"],

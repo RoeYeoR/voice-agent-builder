@@ -15,9 +15,7 @@ import {
 type QualificationResult = {
   qualified: boolean;
   summary: string;
-  budget: string;
-  timeline: string;
-  locationPreference: string;
+  keyDetails: string[];
 } | null;
 
 type Call = {
@@ -84,9 +82,11 @@ export default function CallsPage() {
                           {call.qualificationResult.qualified ? "Qualified" : "Not qualified"}
                         </Badge>
                         <p className="max-w-xs text-xs text-muted-foreground">{call.qualificationResult.summary}</p>
-                        <p className="text-xs text-muted-foreground">
-                          Budget: {call.qualificationResult.budget} · Timeline: {call.qualificationResult.timeline}
-                        </p>
+                        {call.qualificationResult.keyDetails.length > 0 && (
+                          <p className="max-w-xs text-xs text-muted-foreground">
+                            {call.qualificationResult.keyDetails.join(" · ")}
+                          </p>
+                        )}
                       </div>
                     ) : (
                       <span className="text-muted-foreground">—</span>
