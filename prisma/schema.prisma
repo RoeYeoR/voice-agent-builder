@@ -63,6 +63,7 @@ model Call {
   status             String   @default("queued") // queued | in_progress | ended | failed
   transcript         String?
   qualificationResult Json?
+  recordingUrl       String?
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 

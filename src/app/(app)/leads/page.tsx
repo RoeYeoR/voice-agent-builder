@@ -21,6 +21,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "sonner";
 
 type Lead = {
   id: string;
@@ -42,7 +44,7 @@ export default function LeadsPage() {
   const [selectedAgentId, setSelectedAgentId] = useState<string>("");
   const [form, setForm] = useState({ name: "", phone: "", email: "" });
   const [busyLeadId, setBusyLeadId] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   async function refresh() {
     const [leadsRes, agentsRes] = await Promise.all([fetch("/api/leads"), fetch("/api/builder")]);
@@ -52,6 +54,7 @@ export default function LeadsPage() {
     const readyAgents: Agent[] = (agentsData.agents ?? []).filter((a: Agent) => a.vapiAssistantId);
     setAgents(readyAgents);
     setSelectedAgentId((prev) => prev || readyAgents[0]?.id || "");
+    setLoading(false);
   }
 
   useEffect(() => {
@@ -75,18 +78,21 @@ export default function LeadsPage() {
 
   async function callLead(leadId: string) {
     if (!selectedAgentId) {
-      setMessage("Build and sync an agent first (in the Builder tab).");
+      toast.error("Build and sync an agent first (in the Builder tab).");
       return;
     }
     setBusyLeadId(leadId);
-    setMessage(null);
     const res = await fetch("/api/calls", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ agentId: selectedAgentId, leadId }),
     });
     const data = await res.json();
-    setMessage(res.ok ? "Call started — check the Calls tab for progress." : data.error);
+    if (res.ok) {
+      toast.success("Call started", { description: "Check the Calls tab for progress." });
+    } else {
+      toast.error(data.error ?? "Failed to start the call");
+    }
     setBusyLeadId(null);
     refresh();
   }
@@ -96,6 +102,7 @@ export default function LeadsPage() {
       <Card>
         <CardHeader>
           <CardTitle>Add a lead</CardTitle>
+          <p className="text-sm text-muted-foreground">Who should the agent call next?</p>
         </CardHeader>
         <CardContent>
           <form onSubmit={addLead} className="grid grid-cols-1 gap-3 sm:grid-cols-4 sm:items-end">
@@ -146,7 +153,6 @@ export default function LeadsPage() {
           </div>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
-          {message && <p className="text-sm text-muted-foreground">{message}</p>}
           <Table>
             <TableHeader>
               <TableRow>
@@ -157,7 +163,25 @@ export default function LeadsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {leads.map((lead) => (
+              {loading &&
+                Array.from({ length: 3 }).map((_, i) => (
+                  <TableRow key={i}>
+                    <TableCell>
+                      <Skeleton className="h-4 w-24" />
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton className="h-4 w-28" />
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton className="h-5 w-14 rounded-full" />
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Skeleton className="ml-auto h-7 w-14" />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              {!loading &&
+                leads.map((lead) => (
                 <TableRow key={lead.id}>
                   <TableCell>{lead.name}</TableCell>
                   <TableCell>{lead.phone}</TableCell>
@@ -171,7 +195,7 @@ export default function LeadsPage() {
                   </TableCell>
                 </TableRow>
               ))}
-              {leads.length === 0 && (
+              {!loading && leads.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={4} className="text-center text-muted-foreground">
                     No leads yet — add one above.

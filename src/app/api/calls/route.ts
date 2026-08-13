@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { startVapiCall } from "@/lib/vapi";
+import { rateLimit, clientIp } from "@/lib/rate-limit";
 
 export async function GET() {
   const calls = await db.call.findMany({
@@ -11,6 +12,15 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  // This one dials a real phone — much tighter than /api/builder.
+  const { ok, retryAfterMs } = rateLimit(`calls:${clientIp(req)}`, 5, 60_000);
+  if (!ok) {
+    return NextResponse.json(
+      { error: "Too many calls started too quickly — wait a moment and try again." },
+      { status: 429, headers: { "Retry-After": String(Math.ceil((retryAfterMs ?? 0) / 1000)) } },
+    );
+  }
+
   try {
     return await handlePlaceCall(req);
   } catch (err) {

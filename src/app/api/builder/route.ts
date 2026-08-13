@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { anthropic, BUILDER_MODEL, UPDATE_AGENT_CONFIG_TOOL, builderSystemPrompt } from "@/lib/claude";
 import { upsertVapiAssistant } from "@/lib/vapi";
+import { rateLimit, clientIp } from "@/lib/rate-limit";
 
 type AgentConfigPatch = {
   name?: string;
@@ -12,6 +13,17 @@ type AgentConfigPatch = {
 };
 
 export async function POST(req: NextRequest) {
+  // Each turn costs a real Anthropic call (and often a Vapi sync too) — 20/min
+  // per IP is generous for a real conversation but stops a runaway retry loop
+  // or casual abuse from burning through API credits.
+  const { ok, retryAfterMs } = rateLimit(`builder:${clientIp(req)}`, 20, 60_000);
+  if (!ok) {
+    return NextResponse.json(
+      { error: "Too many requests — slow down a little and try again shortly." },
+      { status: 429, headers: { "Retry-After": String(Math.ceil((retryAfterMs ?? 0) / 1000)) } },
+    );
+  }
+
   try {
     return await handleBuilderMessage(req);
   } catch (err) {

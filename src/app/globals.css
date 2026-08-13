@@ -39,6 +39,13 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+  /* The second dominant brand color — warm gold, used sparingly and on
+     purpose (a few CTAs, key badges, small accents). Not part of shadcn's
+     default semantic set, so it gets its own slot rather than overloading
+     --accent (which stays a neutral hover/highlight color used by menus,
+     selects, etc. — keeping those subtle is part of the minimalist point). */
+  --color-brand-gold: var(--brand-gold);
+  --color-brand-gold-foreground: var(--brand-gold-foreground);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -49,59 +56,78 @@
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
+  /* Neutrals lean very slightly cool/teal (low chroma) instead of flat gray —
+     ties the whole palette together without looking colorful. */
+  --background: oklch(0.995 0.002 210);
+  --foreground: oklch(0.18 0.02 220);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
+  --card-foreground: oklch(0.18 0.02 220);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  --popover-foreground: oklch(0.18 0.02 220);
+
+  /* Dominant color #1 — deep teal. Primary actions, links, focus rings. */
+  --primary: oklch(0.47 0.11 185);
+  --primary-foreground: oklch(0.99 0 0);
+
+  --secondary: oklch(0.96 0.008 210);
+  --secondary-foreground: oklch(0.18 0.02 220);
+  --muted: oklch(0.96 0.008 210);
+  --muted-foreground: oklch(0.5 0.02 220);
+  --accent: oklch(0.94 0.012 210);
+  --accent-foreground: oklch(0.18 0.02 220);
+
+  --destructive: oklch(0.577 0.22 25);
+  --border: oklch(0.91 0.006 210);
+  --input: oklch(0.91 0.006 210);
+  --ring: oklch(0.47 0.11 185);
+
+  /* Dominant color #2 — warm gold. Used deliberately sparingly: a couple of
+     CTAs, "synced"/"qualified" badges, small accent marks. */
+  --brand-gold: oklch(0.78 0.14 85);
+  --brand-gold-foreground: oklch(0.28 0.07 185);
+
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
+  --radius: 0.75rem;
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary: oklch(0.47 0.11 185);
   --sidebar-primary-foreground: oklch(0.985 0 0);
   --sidebar-accent: oklch(0.97 0 0);
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --sidebar-ring: oklch(0.47 0.11 185);
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
+  --background: oklch(0.16 0.012 220);
+  --foreground: oklch(0.96 0.005 210);
+  --card: oklch(0.2 0.014 220);
+  --card-foreground: oklch(0.96 0.005 210);
+  --popover: oklch(0.2 0.014 220);
+  --popover-foreground: oklch(0.96 0.005 210);
+
+  --primary: oklch(0.7 0.12 185);
+  --primary-foreground: oklch(0.14 0.02 185);
+
+  --secondary: oklch(0.26 0.014 220);
+  --secondary-foreground: oklch(0.96 0.005 210);
+  --muted: oklch(0.26 0.014 220);
+  --muted-foreground: oklch(0.68 0.015 210);
+  --accent: oklch(0.28 0.016 220);
+  --accent-foreground: oklch(0.96 0.005 210);
+
+  --destructive: oklch(0.704 0.19 22);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
+  --ring: oklch(0.7 0.12 185);
+
+  --brand-gold: oklch(0.8 0.14 85);
+  --brand-gold-foreground: oklch(0.2 0.05 185);
+
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
@@ -109,12 +135,12 @@
   --chart-5: oklch(0.269 0 0);
   --sidebar: oklch(0.205 0 0);
   --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.7 0.12 185);
+  --sidebar-primary-foreground: oklch(0.14 0.02 185);
   --sidebar-accent: oklch(0.269 0 0);
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --sidebar-ring: oklch(0.7 0.12 185);
 }
 
 @layer base {
@@ -126,5 +152,10 @@
   }
   html {
     @apply font-sans;
+  }
+  h1,
+  h2,
+  h3 {
+    @apply tracking-tight;
   }
 }

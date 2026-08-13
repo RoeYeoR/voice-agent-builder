@@ -90,10 +90,11 @@ async function handleToolCalls(message: {
 
 async function handleEndOfCallReport(message: {
   call?: { id?: string; assistantId?: string };
-  artifact?: { transcript?: string };
+  artifact?: { transcript?: string; recording?: { stereoUrl?: string; monoUrl?: string } };
 }) {
   const vapiCallId = message.call?.id;
   const transcript = message.artifact?.transcript ?? "";
+  const recordingUrl = message.artifact?.recording?.stereoUrl ?? message.artifact?.recording?.monoUrl ?? null;
 
   let call = vapiCallId ? await db.call.findFirst({ where: { vapiCallId } }) : null;
 
@@ -116,7 +117,12 @@ async function handleEndOfCallReport(message: {
 
   await db.call.update({
     where: { id: call.id },
-    data: { status: "ended", transcript, qualificationResult: qualificationResult ?? undefined },
+    data: {
+      status: "ended",
+      transcript,
+      qualificationResult: qualificationResult ?? undefined,
+      recordingUrl: recordingUrl ?? undefined,
+    },
   });
 
   return NextResponse.json({ ok: true });

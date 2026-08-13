@@ -7,6 +7,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { WebCallButton } from "@/components/web-call-button";
+import { Sparkles, PhoneCall } from "lucide-react";
+import { toast } from "sonner";
 
 type ChatMessage = { role: "user" | "assistant"; content: string };
 
@@ -22,14 +24,56 @@ type AgentConfig = {
 
 const STORAGE_KEY = "voice-agent-builder:agentId";
 
+// How fast pasted text "types" itself out — for recording a clean demo
+// instead of the text dumping in instantly. Constant rhythm, ms per character.
+const TYPE_SPEED_MS = 28;
+
 export default function BuilderPage() {
   const [agent, setAgent] = useState<AgentConfig | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [vapiWarning, setVapiWarning] = useState<string | null>(null);
+  const [typing, setTyping] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const typingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (typingTimerRef.current) clearInterval(typingTimerRef.current);
+    };
+  }, []);
+
+  function stopTyping() {
+    if (typingTimerRef.current) {
+      clearInterval(typingTimerRef.current);
+      typingTimerRef.current = null;
+    }
+    setTyping(false);
+  }
+
+  // Intercepts a real paste and replays it as a typewriter effect instead of
+  // dumping the text in instantly — for recording a clean, elegant demo.
+  function handlePaste(e: React.ClipboardEvent<HTMLTextAreaElement>) {
+    const text = e.clipboardData.getData("text");
+    if (!text) return;
+    e.preventDefault();
+
+    stopTyping();
+
+    const target = e.currentTarget;
+    const start = target.selectionStart ?? input.length;
+    const end = target.selectionEnd ?? input.length;
+    const before = input.slice(0, start);
+    const after = input.slice(end);
+
+    setTyping(true);
+    let i = 0;
+    typingTimerRef.current = setInterval(() => {
+      i++;
+      setInput(before + text.slice(0, i) + after);
+      if (i >= text.length) stopTyping();
+    }, TYPE_SPEED_MS);
+  }
 
   useEffect(() => {
     const savedId = localStorage.getItem(STORAGE_KEY);
@@ -50,13 +94,11 @@ export default function BuilderPage() {
   async function sendMessage(e: React.FormEvent) {
     e.preventDefault();
     const text = input.trim();
-    if (!text || loading) return;
+    if (!text || loading || typing) return;
 
     setMessages((prev) => [...prev, { role: "user", content: text }]);
     setInput("");
     setLoading(true);
-    setError(null);
-    setVapiWarning(null);
 
     try {
       const res = await fetch("/api/builder", {
@@ -71,12 +113,12 @@ export default function BuilderPage() {
       localStorage.setItem(STORAGE_KEY, data.agent.id);
       setMessages((prev) => [...prev, { role: "assistant", content: data.reply }]);
       if (data.vapiError) {
-        setVapiWarning(
-          `Saved locally, but couldn't sync to Vapi yet: ${data.vapiError}. Add your Vapi keys to .env and try again.`,
-        );
+        toast.warning("Saved locally, but couldn't sync to Vapi yet", {
+          description: `${data.vapiError} — add your Vapi keys to .env and try again.`,
+        });
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
+      toast.error(err instanceof Error ? err.message : "Something went wrong");
     } finally {
       setLoading(false);
     }
@@ -86,15 +128,16 @@ export default function BuilderPage() {
     localStorage.removeItem(STORAGE_KEY);
     setAgent(null);
     setMessages([]);
-    setError(null);
-    setVapiWarning(null);
   }
 
   return (
     <div className="mx-auto grid max-w-5xl grid-cols-1 gap-6 px-4 py-6 md:grid-cols-2">
       <Card className="flex h-[75vh] flex-col">
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Builder chat</CardTitle>
+          <div>
+            <CardTitle>Builder chat</CardTitle>
+            <p className="text-sm text-muted-foreground">Describe the agent; watch it appear on the right.</p>
+          </div>
           <Button variant="ghost" size="sm" onClick={startNewAgent}>
             New agent
           </Button>
@@ -103,43 +146,53 @@ export default function BuilderPage() {
           <div ref={scrollRef} className="flex-1 overflow-y-auto pr-2">
             <div className="flex flex-col gap-3">
               {messages.length === 0 && (
-                <p className="text-sm text-muted-foreground">
-                  Describe any voice agent you want — it&apos;s not limited to one industry. For example:
-                  &quot;Build me an assistant that calls real estate leads, asks about their budget, timeline,
-                  and preferred neighborhood, and books a viewing once they agree on a time,&quot; or
-                  &quot;Build me a SaaS demo booker that asks about team size and current tooling, then books
-                  a 30-minute demo.&quot;
-                </p>
+                <div className="flex flex-col items-start gap-3 rounded-xl border border-dashed p-4">
+                  <span className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                    <Sparkles className="size-4" strokeWidth={2.25} />
+                  </span>
+                  <p className="text-sm text-muted-foreground">
+                    Describe any voice agent you want — it&apos;s not limited to one industry. For example:
+                    &quot;Build me an assistant that calls real estate leads, asks about their budget, timeline,
+                    and preferred neighborhood, and books a viewing once they agree on a time,&quot; or
+                    &quot;Build me a SaaS demo booker that asks about team size and current tooling, then books
+                    a 30-minute demo.&quot;
+                  </p>
+                </div>
               )}
               {messages.map((m, i) => (
                 <div
                   key={i}
-                  className={`max-w-[85%] rounded-lg px-3 py-2 text-sm ${
+                  className={`max-w-[85%] animate-in fade-in slide-in-from-bottom-1 rounded-lg px-3 py-2 text-sm duration-300 ${
                     m.role === "user" ? "self-end bg-primary text-primary-foreground" : "self-start bg-muted"
                   }`}
                 >
                   {m.content}
                 </div>
               ))}
-              {loading && <p className="text-sm text-muted-foreground">Thinking…</p>}
+              {loading && (
+                <p className="animate-in fade-in text-sm text-muted-foreground">Thinking…</p>
+              )}
             </div>
           </div>
-          {error && <p className="text-sm text-destructive">{error}</p>}
-          {vapiWarning && <p className="text-xs text-amber-600">{vapiWarning}</p>}
           <form onSubmit={sendMessage} className="flex gap-2">
             <Textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
+              onPaste={handlePaste}
               onKeyDown={(e) => {
+                if (e.key === "Escape" && typing) {
+                  stopTyping();
+                  return;
+                }
                 if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
-                  sendMessage(e);
+                  if (!typing) sendMessage(e);
                 }
               }}
               placeholder="Describe your agent, or ask for a change…"
               className="min-h-[44px] flex-1 resize-none"
             />
-            <Button type="submit" disabled={loading || !input.trim()}>
+            <Button type="submit" disabled={loading || typing || !input.trim()}>
               Send
             </Button>
           </form>
@@ -149,12 +202,18 @@ export default function BuilderPage() {
       <Card>
         <CardHeader>
           <CardTitle>Agent preview</CardTitle>
+          <p className="text-sm text-muted-foreground">The live config, synced straight to Vapi.</p>
         </CardHeader>
         <CardContent className="flex flex-col gap-4 text-sm">
           {!agent ? (
-            <p className="text-muted-foreground">
-              Nothing built yet — describe your agent in the chat and it&apos;ll show up here.
-            </p>
+            <div className="flex flex-col items-center gap-2 py-10 text-center">
+              <span className="flex size-10 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                <PhoneCall className="size-4" strokeWidth={2.25} />
+              </span>
+              <p className="text-muted-foreground">
+                Nothing built yet — describe your agent in the chat and it&apos;ll show up here.
+              </p>
+            </div>
           ) : (
             <>
               <div>
@@ -199,7 +258,10 @@ export default function BuilderPage() {
               <Separator />
               <div className="flex items-center justify-between">
                 <span className="text-xs font-medium text-muted-foreground">Vapi sync</span>
-                <Badge variant={agent.vapiAssistantId ? "default" : "outline"}>
+                <Badge
+                  variant="outline"
+                  className={agent.vapiAssistantId ? "border-transparent bg-brand-gold text-brand-gold-foreground" : ""}
+                >
                   {agent.vapiAssistantId ? "Synced" : "Not synced yet"}
                 </Badge>
               </div>

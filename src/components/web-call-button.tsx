@@ -4,7 +4,15 @@ import { useEffect, useRef, useState } from "react";
 import Vapi from "@vapi-ai/web";
 import { Button } from "@/components/ui/button";
 
-export function WebCallButton({ assistantId }: { assistantId: string }) {
+export function WebCallButton({
+  assistantId,
+  idleLabel = "Call in browser",
+  size,
+}: {
+  assistantId: string;
+  idleLabel?: string;
+  size?: "default" | "sm" | "lg" | "icon";
+}) {
   const vapiRef = useRef<Vapi | null>(null);
   const [status, setStatus] = useState<"idle" | "connecting" | "in-call">("idle");
   const [error, setError] = useState<string | null>(null);
@@ -49,11 +57,12 @@ export function WebCallButton({ assistantId }: { assistantId: string }) {
     <div className="flex flex-col gap-1">
       <Button
         type="button"
+        size={size}
         variant={status === "in-call" ? "destructive" : "default"}
         onClick={handleClick}
         disabled={status === "connecting"}
       >
-        {status === "in-call" ? "End call" : status === "connecting" ? "Connecting…" : "Call in browser"}
+        {status === "in-call" ? "End call" : status === "connecting" ? "Connecting…" : idleLabel}
       </Button>
       {error && <p className="text-xs text-destructive">{error}</p>}
     </div>

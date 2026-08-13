@@ -122,11 +122,11 @@ never commit it.
 ```bash
 npm install          # already run once during setup, safe to re-run
 npm run db:migrate    # creates the tables in your Supabase database
-npm run db:seed       # adds two sample leads
+npm run db:seed       # sample leads + a demo agent + a couple of illustrative calls
 npm run dev            # starts the app at http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) — it redirects to `/builder`.
+Open [http://localhost:3000](http://localhost:3000) for the landing page, or jump straight to `/builder`.
 
 ### Try the golden path
 
@@ -154,6 +154,18 @@ machine over the internet, which `localhost` can't do on its own. Two options:
   [Vapi's own local webhook CLI](https://docs.vapi.ai/cli/webhook), then set
   `NEXT_PUBLIC_APP_URL` in `.env` to the tunnel's `https://` URL before chatting in the
   builder (every edit re-syncs the webhook URL to Vapi automatically).
+
+## Testing & CI
+
+- `npm run lint` / `npm run build` run on every push via GitHub Actions
+  (`.github/workflows/ci.yml`) — build-time env vars are dummy placeholders, since
+  `next build` never actually calls Anthropic/Vapi/Cal.com, it just needs the
+  constructors not to throw on a missing key.
+- `npm run test:eval` runs a small **eval** (not a unit test) that sends fixed sample
+  transcripts to the real Claude API and checks `extractQualification()` calls them
+  qualified/not-qualified correctly (`tests/qualification.eval.ts`). This needs a real
+  `ANTHROPIC_API_KEY` and costs a few cents per run, so it's intentionally excluded
+  from CI — run it by hand whenever the extraction prompt changes.
 
 ## Deploying
 
